@@ -1,0 +1,6 @@
+*.exe
+!TASM.exe
+!TLINK.exe
+!TD.exe
+*.obj
+*.map
