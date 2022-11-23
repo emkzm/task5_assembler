@@ -45,7 +45,16 @@ B10DISPLAY proc       ;Сохраняет символ и атрибут в об
 pusha ; поместить в стек все регистры общ назначения
 mov al, 2Ah ; символ * в аски
 mov ah, 0A8h ; значение атрибута
-mov di, (((row*80)+col)*2)
+;mov di, (((row*80)+col)*2)
+
+mov Al, byte ptr row
+mov bl, 80
+mul bl
+add AX, col
+mov bx, 2
+mul bx
+mov di, AX
+
 mov cx, 0
 
 label1:
@@ -57,7 +66,14 @@ label1:
         add di, 2 ; переход к след позиции в строке
         loop print
     ; задать отступ для след строки 
-    add di, (80-(col*2)) ; к знач добавляется n положений до начала след строки
+    ;add di, (80-(col*2)) ; к знач добавляется n положений до начала след строки
+    mov Al, col
+    mov bl, 2
+    mul bl
+    mov bx, 80
+    sub bx, ax
+    mov di, bx
+
     pop cx ; восстановить из стека
     inc cx ; увеличить cx на единицу
     cmp cx, word ptr height
