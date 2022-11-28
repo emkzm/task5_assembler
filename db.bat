@@ -1,1 +1,2 @@
 dosbox.exe .
+pause
