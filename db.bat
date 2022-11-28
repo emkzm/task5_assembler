@@ -1,1 +1,1 @@
-dosbox .
+dosbox.exe .
