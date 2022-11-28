@@ -5,18 +5,18 @@
 ;Определение переменных:
 
 ;rows – строка, в которой находится курсор
-start_row db 5
+start_row db 10
 rows db 10
-last_row db 20  
+last_row db 20
 ;cols – столбец, в котором находится курсор
-start_col db 30
+start_col db 10
 cols db 10
-last_col db 50
+last_col db 20
 ;mode – номер режима
 mode db ?
 ;char – ASCII-символ для вывода
 char db 44h
-
+color db 50h
 top_left_corner db 20, 10     ; start position col:row
 bottom_right_corner db 30, 20 ; x:y  
 
@@ -45,9 +45,11 @@ not_last:
 	mov al, cols
 	cmp al, last_col
 	pop ax
-	jne not_last ; переход к новой строке 
-
+	jne not_last  
+	; переход к новой строке
 	inc rows ; увеличим значение rows на 1
+	inc char
+	add color, 10h
 	push ax
 	mov al, start_col
 	mov cols, al ; и устанавливаем значение cols на дефолт
@@ -87,7 +89,7 @@ C10CLEAR proc      ;Очистка экрана
 	; Создаем окно с 16 строками и 16 столбцами: 
 	mov ah, 06h ; в регистр AH заносим значение 06h
 	mov al, 10h ; в регистр AL – число строк 16
-	mov bh, 28h ; в регистр BH значение атрибута - зеленый(2) фон, белые символы(7)  
+	mov bh, color ; в регистр BH значение атрибута color 
 	mov cl, top_left_corner ; в регистр CX – координаты левого верхнего угла 04:24
 	mov ch, top_left_corner + 1
 	mov dl, bottom_right_corner
