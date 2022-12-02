@@ -3,36 +3,17 @@
 .186
 .data 
 
-top_left_corner db 5, 30
-rect db 15, 20
-char db 2Ah
+top_left_corner db 10, 20 ; row column
+rect db 10, 10 			 ; row column
+bottom_right_corner db 20, 30
+char db 44h
+color db 05h
+mode db ?
 
 .code
-start:
-	mov ax, @data
-	mov ds, ax
-	
-	mov ax, 0b900h ;Используя сегментный регистр ES,  
-	mov es, ax	   ;организовать запись данных в видеопамять
-                   ;по адресу В900h:0000h (страница 1)
-	
-	;Определить текущий видеорежим и текущую активную страницу
-	;(функция 0Fh прерывания int 10h) и сохранить их в стеке
-	
-	;Установить видеорежим 03 (функция 00h прерывания int 10h)
-	;и текущую страницу 01 (функция 05h прерывания int 10h)
-	
-	;Вызвать подпрограмму B10DISPLAY,
-	;которая подготавливает область вывода
-	
-	call B10DISPLAY
-	
-	;После завершения вывода программа ожидает нажатия клавиши
-	;и, восстановив исходную страницу и видеорежим, завершается
 
-	mov ax, 4C00h
-	int 21h
-
+;Определить текущий видеорежим и текущую активную страницу
+;(функция 0Fh прерывания int 10h) и сохранить их в стеке
 	
 B10MODE proc       ;Получение/установка видеорежима
 	; Получаем текущий режим в регистре AL: 
@@ -42,40 +23,96 @@ B10MODE proc       ;Получение/установка видеорежима
 	mov mode, al ; заносим в mode содержимое регистра AL.
 	; Переводим экран в текстовый режим с номером 03: 
 	mov ah, 00h ; в регистр AH помещается значение 00h,
-	mov al, 03h ;  в регистр AL – номер режима 03,
+	mov al, 03h ;  в регистр AL – номер режима 03, 25x80 страницы 0-7 
 	int 10h ;  после чего вызывается прерывание 10h.
+	mov ah, 05h
+	mov al, 01h ; первая страница
+	int 10h
 	ret ; Выполняем возврат из подпрограммы в точку вызова.
 B10MODE endp
-
-C10CLEAR proc      ;Очистка экрана
-	pusha ; Помещаем в стек все регистры общего назначения.
-	mov ah, 06h ; Прокручиваем вверх весь экран целиком (см. функция 06h).
-	int 10h
-	; Создаем окно с 16 строками и 16 столбцами: 
-	mov ah, 06h ; в регистр AH заносим значение 06h
-	mov al, 10h ; в регистр AL – число строк 16
-	mov bh, color ; в регистр BH значение атрибута - зеленый(2) фон, белые символы(7)  
-	mov cl, top_left_corner ; в регистр CX – координаты левого верхнего угла 04:24
-	mov ch, top_left_corner + 1
-	mov dl, bottom_right_corner
-	mov dh, bottom_right_corner + 1
-	int 10h ; после чего вызывается прерывание 10h.
-	popa ; Загружаем из стека все регистры общего назначения
-	ret ; Выполняем возврат из подпрограммы в точку вызова
-C10CLEAR endp
 
 B10DISPLAY proc       ;Сохраняет символ и атрибут в области видеопамяти
 	pusha
 	mov al, char ; *
-	mov ah, 0A8h
-	mov di, 0 ; <- ( (row * 80) + column ) * 2
-	xor cx, cx
-	print_line:
-		mov cx, rect+1
-		mov al, char
-		mov ah, 05h
-		mov es:word ptr[di], ax
+	mov ah, color ; 
+	
+	; ----------------------
+	;di <- [( ((row = 5) * 80) + (column = 30) ) * 2]
+	push ax
+	push bx
+	mov ax, word ptr top_left_corner
+	mov bx, 80
+	mul bx
+	add ax, word ptr top_left_corner+1
+	mov bx, 2
+	mul bx
+		mov di, ax
+	pop bx
+	pop ax
+	; --------------------
+	;xor cx, cx
+	mov cx, word ptr rect
+	print_row:
+		push cx
+		mov cx, word ptr rect+1
+		mov al, char ; символ
+		mov ah, color ; атрибут
+		print_line: 
+			; вывод строки символов
+			mov es:word ptr[di], ax
+			add di, 2 ; след позиция в строке
+			loop print_line
+			
+		; ---------------------
+		; n = ((80 - column) * 2 )
+		push ax
+		push bx
+		mov ax, 80
+		sub ax, word ptr top_left_corner+1
+		mov bx, 2
+		mul bx
+			add di, ax 
+		push bx
+		pop ax
+		; ---------------------
+		
+		pop cx
+		;inc cx
+		inc char
+		inc color
+		;cmp cx, word ptr rect ; последняя строка?
+		;jne print_row ; нет - еще раз 
+		loop print_row
+		
+	popa
 	ret
 B10DISPLAY endp
+
+start:
+	mov ax, @data
+	mov ds, ax
+	
+	mov ax, 0b900h ;Используя сегментный регистр ES,  
+	mov es, ax	   ;организовать запись данных в видеопамять
+                   ;по адресу В900h:0000h (страница 1)
+	call B10MODE
+	call B10DISPLAY
+	
+	mov ah, 10h ; Запрос на получение символа с клавиатуры
+	int 16h
+
+	
+	mov ah, 00h ; Возврат исходного графического режима
+	mov al, mode
+	int 10h
+	
+	mov ah, 05h
+	mov al, 00h ; первая страница
+	int 10h
+	
+	mov ax, 4C00h
+	int 21h
+
+
 
 end start
