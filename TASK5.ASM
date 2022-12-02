@@ -8,53 +8,60 @@
 start_row db 10
 rows db 10
 last_row db 20
+
 ;cols – столбец, в котором находится курсор
 start_col db 10
 cols db 10
 last_col db 20
+
 ;mode – номер режима
 mode db ?
+
 ;char – ASCII-символ для вывода
 char db 44h
-color db 50h
+color db 05h ; attributes
 top_left_corner db 20, 10     ; start position col:row
 bottom_right_corner db 30, 20 ; x:y  
 
 .code
+
+dbcmp macro var1, var2
+	push ax
+	mov al, var1
+	cmp al, var2
+	pop ax
+endm
+
+dbmov macro var1, var2
+	push ax
+	mov al, var2
+	mov var1, al
+	pop ax
+endm
+
 start:
 	mov ax,@data
 	mov ds,ax
 	call B10MODE ; установка видео режима
 	call C10CLEAR ; очистка экрана
 
-not_last: 
-	;cmp2datas <rows, last_row>
-	;cmp rows, last_row
-	push ax
-	mov al, rows
-	cmp al, last_row
-	pop ax
-	jg stop
+print: 
+	dbcmp rows, last_row ; проверка на последний символ
+	je stop
 	call D10CURSOR ; устанока курсора
-	call E10DISPLAY
+	call E10DISPLAY ; рисуем символ
 	
+	;переход на след элемент
+	inc cols ; увеличить значение столбца на 1
+	dbcmp cols, last_col ; проверим на конец столбца
+	jne print  
 	
-	add cols, 1 ; увеличить значение столбца на 
-	;cmp2datas <cols, last_col>
-	push ax
-	mov al, cols
-	cmp al, last_col
-	pop ax
-	jne not_last  
 	; переход к новой строке
 	inc rows ; увеличим значение rows на 1
 	inc char
-	add color, 10h
-	push ax
-	mov al, start_col
-	mov cols, al ; и устанавливаем значение cols на дефолт
-	pop ax
-	jmp not_last
+	inc color
+	dbmov cols, start_col ; заносим в переменную cols start_col
+	jmp print
 
 stop:
 	mov ah, 10h ; Запрос на получение символа с клавиатуры
@@ -87,9 +94,9 @@ C10CLEAR proc      ;Очистка экрана
 	mov ah, 06h ; Прокручиваем вверх весь экран целиком (см. функция 06h).
 	int 10h
 	; Создаем окно с 16 строками и 16 столбцами: 
-	mov ah, 06h ; в регистр AH заносим значение 06h
+	mov ah, 06h ; в регистр AH заносим значение 6 
 	mov al, 10h ; в регистр AL – число строк 16
-	mov bh, color ; в регистр BH значение атрибута color 
+	mov bh, color ; в регистр BH значение color 
 	mov cl, top_left_corner ; в регистр CX – координаты левого верхнего угла 04:24
 	mov ch, top_left_corner + 1
 	mov dl, bottom_right_corner
@@ -122,13 +129,5 @@ E10DISPLAY proc    ;Вывод символа на экран
 	popa; Загружаем из стека все регистры общего назначения
 	ret ; Выполняем возврат из подпрограммы в точку вызова
 E10DISPLAY endp
-
-;cmp2datas macro first, second ; cmp a, b 
-;	push ax
-;	mov al, first
-;	mov ah, second
-;	cmp al, ah
-;	pop ax
-;endm
 
 end start          ;Конец программы

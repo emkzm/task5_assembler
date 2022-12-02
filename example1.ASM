@@ -13,6 +13,8 @@ mode db ?
 ;char_ctr – счетчик ASCII-символов, начальное значение равно 0
 char_ctr db 0
 
+color db 21h
+
 top_left_corner db 24, 04     ; 04:24
 bottom_right_corner db 54, 19 ; 19:54
 
@@ -28,6 +30,7 @@ no_lsymbol_and_no_lim:
 	cmp char_ctr, 255 ; последний символ ?
 	je last_symbol  
 	call E10DISPLAY
+	inc color
 
 	inc char_ctr ; увеличить значение счетчика аски символов на 1
 	add col, 2 ; увеличить значение столбца на 2
@@ -71,7 +74,7 @@ C10CLEAR proc      ;Очистка экрана
 	; Создаем окно с 16 строками и 16 столбцами: 
 	mov ah, 06h ; в регистр AH заносим значение 06h
 	mov al, 10h ; в регистр AL – число строк 16
-	mov bh, 28h ; в регистр BH значение атрибута - зеленый(2) фон, белые символы(7)  
+	mov bh, color ; в регистр BH значение атрибута - зеленый(2) фон, белые символы(7)  
 	mov cl, top_left_corner ; в регистр CX – координаты левого верхнего угла 04:24
 	mov ch, top_left_corner + 1
 	mov dl, bottom_right_corner
